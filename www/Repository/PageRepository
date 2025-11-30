@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Repository;
+
+use PDO;
+use Exception;
+use PDOException;
+use App\Model\Page;
+use App\Repository\Connexion;
+
+class PageRepository
+{
+    private PDO $db;
+
+    public function __construct()
+    {
+        $this->db = Connexion::getInstance();
+    }
+
+
+    /**
+     * Insère une nouvelle page en base de données.
+     * Retourne TRUE si succès.
+     * Lève une exception en cas de doublon de slug ou autre erreur SQL.
+     */
+    public function insertPage(Page $page): bool
+    {
+        $sql = 'INSERT INTO public."page" (titre, slug, contenu, id_utilisateur, est_publie, date_creation, date_modification) VALUES (:titre, :slug, :contenu, :id_user, :publie, :cree, :modif)';
+
+        try {
+            $stmt = $this->db->prepare($sql);
+
+            $stmt->bindValue(':titre',   $page->getTitre());
+            $stmt->bindValue(':slug',    $page->getSlug());
+            $stmt->bindValue(':contenu', $page->getContenu());
+            $stmt->bindValue(':id_user', $page->getIdUtilisateur(), PDO::PARAM_INT);
+
+            // PostgreSQL comprend très bien les booléens
+            $stmt->bindValue(':publie',  $page->isEstPublie(), PDO::PARAM_BOOL);
+
+            // Dates
+            $stmt->bindValue(':cree',  $page->getDateCreation()->format('Y-m-d H:i:s'));
+            $stmt->bindValue(':modif', $page->getDateModification()->format('Y-m-d H:i:s'));
+
+            $stmt->execute();
+            return true;
+
+        } catch (PDOException $e) {
+
+            // Code PostgreSQL pour violation de contrainte d'unicité
+            if ($e->getCode() === '23505') {
+                throw new Exception("Ce slug existe déjà dans la base de données.");
+            }
+
+            throw $e; // Une autre erreur SQL
+        }
+    }
+}
