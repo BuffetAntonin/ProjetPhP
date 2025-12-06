@@ -6,11 +6,9 @@
   controller: Base
   action: contact
 
-
 /mon-super-portfolio:
   controller: Base
   action: portfolio
-
 
 /login:
   controller: Auth
@@ -24,6 +22,26 @@
   controller: Auth
   action: register
 
-/creePage:
-  controller: Page
-  action: ajouter
+/cree-page:
+  controller: PageController
+  action: insert
+
+/index-page:
+  controller: PageController
+  action : index
+
+/supprime-page:
+  controller: PageController
+  action: delete
+
+/publication:
+  controller: PageController
+  action: publication
+
+/update-page:
+  controller: PageController
+  action: update
+
+/creer-article:
+  controller: ArticleController
+  action: insert

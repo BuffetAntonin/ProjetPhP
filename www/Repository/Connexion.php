@@ -9,9 +9,7 @@ class Connexion
 {
     private static ?PDO $instance = null;
 
-    private static string $dsn = "pgsql:host=localhost;port=5432;dbname=votre_bdd;";
-    private static string $user = "postgres";
-    private static string $password = "votre_mot_de_passe";
+    private static string $dsn = "pgsql:dbname=devdb;host=db";
 
     // Empêche l'instanciation directe
     private function __construct() {}
@@ -21,9 +19,12 @@ class Connexion
 
     public static function getInstance(): PDO
     {
+        $user = getenv('POSTGRES_USER') ?: 'devuser';
+        $password = getenv('POSTGRES_PASSWORD') ?: 'devpass';
+        
         if (self::$instance === null) {
             try {
-                self::$instance = new PDO(self::$dsn, self::$user, self::$password);
+                self::$instance = new PDO(self::$dsn, $user, $password);
                 self::$instance->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             } catch (Exception $e) {
                 die("Erreur SQL : " . $e->getMessage());
