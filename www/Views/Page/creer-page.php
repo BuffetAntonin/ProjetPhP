@@ -40,4 +40,5 @@
     </div>
     
     <button type="submit">Enregistrer</button>
+    <a href="/index-page">Liste des pages</a>
 </form>

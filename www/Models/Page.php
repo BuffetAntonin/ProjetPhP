@@ -155,7 +155,7 @@ class Page
     }
 
     // Accepte une chaîne (venant de la DB) ou un objet DateTime
-    public function setDateCreation(string|DateTime $date): self
+    public function setDateCreation(DateTime $date): self
     {
         $this->dateCreation = is_string($date) ? new DateTime($date) : $date;
         return $this;
@@ -164,12 +164,6 @@ class Page
     public function getDateModification(): ?DateTime
     {
         return $this->dateModification;
-    }
-
-    public function setDateModification(string|DateTime $date): self
-    {
-        $this->dateModification = is_string($date) ? new DateTime($date) : $date;
-        return $this;
     }
 
     public function isEstPublie(): bool

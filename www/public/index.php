@@ -1,6 +1,9 @@
 <?php
 
 namespace App;
+
+use App\Controllers\Base;
+use App\Repository\PageRepository;
 /*
  *
  * TP : Routing
@@ -40,21 +43,42 @@ $requestUri = strtolower($requestUri);
 
 $routes = yaml_parse_file("../routes.yml");
 
-//Vérifier que l'uri existe dans les routes
-if(empty($routes[$requestUri])){
+
+if(!empty($routes[$requestUri])){
+    $controllerName = $routes[$requestUri]["controller"];
+    $actionName = $routes[$requestUri]["action"];
+} 
+else {
+    // 2. Si pas trouvé, on regarde si c'est une page dynamique en BDD
+    // On doit enlever le slash initial pour chercher le slug (ex: "/test" -> "test")
+    $slug = ltrim($requestUri, '/'); 
+    
+    $page = PageRepository::getInstance()->findBySlug($slug);
+
+    if($page) {
+        // Si la page existe, on force le controller Base et l'action showDynamicPage
+        $controllerName = "Base";
+        $actionName = "showPage";
+        // Astuce : on passe le slug via $_GET pour le récupérer dans le controller ou on modifie l'appel
+        // Pour faire simple ici, modifions l'appel de méthode plus bas
+        $paramToPass = $slug; 
+    }
+}
+
+// Si après YAML et BDD, on a toujours rien -> 404
+if(!$controllerName || !$actionName){
     die("Aucune route pour cette uri : page 404");
 }
 
-if(empty($routes[$requestUri]["controller"]) || empty($routes[$requestUri]["action"]) ){
-    die("Aucun controller ou action pour cette uri : page 404");
-}
+// C'est ici que ton snippet intervient pour unifier les noms
+$controller = $controllerName;
+$action = $actionName;
 
-$controller = $routes[$requestUri]["controller"];
-$action = $routes[$requestUri]["action"];
-
+// Vérification de l'existence du fichier
 if(!file_exists("../Controllers/".$controller.".php")){
     die("Aucun fichier controller pour cette uri");
 }
+
 
 include "../Controllers/".$controller.".php";
 
@@ -69,4 +93,8 @@ if(!method_exists($objetController, $action)){
     die("La methode du controller n'existe pas");
 }
 
-$objetController->$action();
+if (isset($paramToPass)) {
+    $objetController->$action($paramToPass);
+} else {
+    $objetController->$action();
+}

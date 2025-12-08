@@ -10,7 +10,7 @@
         <?php include $this->viewPath;?>
 
         <footer>
-            <marquee>© Skrzypczyk</marquee>
+            <marquee>© Buffet</marquee>
         </footer>
     </body>
 </html>

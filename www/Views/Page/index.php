@@ -98,3 +98,5 @@ $pages = json_decode($pages_json ?? '[]', true);
         <?php endif; ?>
     </tbody>
 </table>
+
+<a href="/">Accueil</a>

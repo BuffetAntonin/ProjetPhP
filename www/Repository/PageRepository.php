@@ -164,4 +164,50 @@ class PageRepository
             throw $e;
         }
     }
+
+
+    public function findAllPublished(): array
+    {
+        // On récupère uniquement celles qui sont publiées (true)
+        $sql = "SELECT * FROM public.page WHERE est_publie = true ORDER BY titre ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+
+        $pages = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $p = new Page(
+                $row['titre'],
+                $row['slug'],
+                $row['contenu'],
+                $row['id_utilisateur'],
+                $row['est_publie']
+            );
+            $p->setIdPage($row['id_page']);
+            $pages[] = $p;
+        }
+        return $pages;
+    }
+
+    public function findBySlug(string $slug): ?Page
+    {
+        $sql = "SELECT * FROM public.page WHERE slug = :slug AND est_publie = true LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':slug', $slug);
+        $stmt->execute();
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) return null;
+
+        $p = new Page(
+            $row['titre'],
+            $row['slug'],
+            $row['contenu'],
+            $row['id_utilisateur'],
+            $row['est_publie']
+        );
+        $p->setIdPage($row['id_page']);
+        return $p;
+    }
+
 }
