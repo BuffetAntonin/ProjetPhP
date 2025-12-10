@@ -9,93 +9,86 @@ use App\Repository\PageRepository;
 
 class PageController
 {
-    private PageRepository $pageRepository;
+    private PageRepository $repo;
 
     public function __construct()
     {
+        // ON REMET LA SESSION (Indispensable pour les messages Flash)
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        $this->pageRepository = PageRepository::getInstance();
+        $this->repo = PageRepository::getInstance();
     }
 
+    /**
+     * Affiche la liste des pages
+     */
     public function index(): void
     {
-        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-            header('Location: /'); 
-            exit; 
-        }
-        
-        $userId = $_SESSION['user_id'];
+        $idUtilisateur = 1;
 
-        $pageObjects = $this->pageRepository->findAllByUserId($userId);
+        // 1. Récupération des données
+        $pagesObjects = $this->repo->findAllByUserId($idUtilisateur);
 
-        $pagesList = [];
-        foreach($pageObjects as $page) {
-            // Les clés ('id', 'titre'...) restent en français car la vue les attend probablement ainsi
-            $pagesList[] = [
-                'id' => $page->getIdPage(),
-                'titre' => $page->getTitre(),
-                'slug' => $page->getSlug(),
-                'est_publie' => $page->isEstPublie()
+        $pagesArray = [];
+        foreach($pagesObjects as $p) {
+            $pagesArray[] = [
+                'id' => $p->getIdPage(),
+                'titre' => $p->getTitre(),
+                'slug' => $p->getSlug(),
+                'est_publie' => $p->isEstPublie()
             ];
         }
 
-        $renderer = new Render('page/index', 'backoffice');
+        $render = new Render('page/index', 'backoffice');
         
+        // --- GESTION DES MESSAGES FLASH VIA SESSION ---
         $flashMessage = '';
         $flashType = '';
 
         if (isset($_SESSION['flash_success'])) {
             $flashMessage = $_SESSION['flash_success'];
             $flashType = 'success';
-            unset($_SESSION['flash_success']);
+            unset($_SESSION['flash_success']); // On supprime pour qu'il ne s'affiche qu'une fois
         } elseif (isset($_SESSION['flash_error'])) {
             $flashMessage = $_SESSION['flash_error'];
             $flashType = 'error';
             unset($_SESSION['flash_error']);
         }
 
-        $renderer->assign('flash_message', $flashMessage);
-        $renderer->assign('flash_type', $flashType);
-        $renderer->assign('pages_json', json_encode($pagesList));
+        $render->assign('flash_message', $flashMessage);
+        $render->assign('flash_type', $flashType);
+        $render->assign('pages_json', json_encode($pagesArray));
         
-        $renderer->render();
+        $render->render();
     }
 
+    /**
+     * Traitement de l'insertion
+     */
     public function insert(): void
     {
-        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-            header('Location: /'); 
-            exit; 
-        }
-        
-        $renderer = new Render('page/creer-page', 'backoffice');
+        $render = new Render('page/creer-page', 'backoffice');
 
-        $title = ''; 
-        $slug = ''; 
-        $content = ''; 
-        $isPublished = false;
-        
+        $titre = ''; $slug = ''; $contenu = ''; $estPublie = false;
         $message = ""; 
-        $errors = [];
+        $erreurs = [];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = $_SESSION['user_id']; 
+            $idUtilisateur = 1; 
             
-            // On garde les clés $_POST en français car elles viennent du formulaire HTML
-            $title = $_POST['titre'] ?? '';
+            $titre = $_POST['titre'] ?? '';
             $slug = $_POST['slug'] ?? '';
-            $content = $_POST['contenu'] ?? '';
-            $isPublished = isset($_POST['publie']);
+            $contenu = $_POST['contenu'] ?? '';
+            $estPublie = isset($_POST['publie']);
 
-            $page = new Page($title, $slug, $content, $userId, $isPublished);
+            $page = new Page($titre, $slug, $contenu, $idUtilisateur, $estPublie);
 
             if (empty($page->getErreurs())) {
                 try {
-                    $success = $this->pageRepository->insertPage($page);
+                    $succes = $this->repo->insertPage($page);
 
-                    if ($success) {
+                    if ($succes) {
                         // SUCCÈS : On utilise la SESSION
                         $_SESSION['flash_success'] = "✅ La page a été créée avec succès !";
                         header('Location: /index-page');
@@ -106,42 +99,38 @@ class PageController
                 } 
             } else {
                 $message = "Veuillez corriger les erreurs ci-dessous.";
-                $errors = $page->getErreurs();
+                $erreurs = $page->getErreurs();
             }
         }
 
-        // On garde les clés d'assignation en français pour la compatibilité avec la vue
-        $renderer->assign('titre', $title);
-        $renderer->assign('slug', $slug);
-        $renderer->assign('contenu', $content);
-        $renderer->assign('publie_etat', $isPublished ? 'checked' : '');
-        $renderer->assign('message', $message);
-        
-        $renderer->assign('error_titre',   $errors['titre'] ?? '');
-        $renderer->assign('error_slug',    $errors['slug'] ?? '');
-        $renderer->assign('error_contenu', $errors['contenu'] ?? '');
+        $render->assign('titre', $titre);
+        $render->assign('slug', $slug);
+        $render->assign('contenu', $contenu);
+        $render->assign('publie_etat', $estPublie ? 'checked' : '');
+        $render->assign('message', $message);
+        $render->assign('error_titre',   $erreurs['titre'] ?? '');
+        $render->assign('error_slug',    $erreurs['slug'] ?? '');
+        $render->assign('error_contenu', $erreurs['contenu'] ?? '');
 
-        $renderer->render();
+        $render->render();
     }
 
+    /**
+     * Suppression (Avec Session et vérifications)
+     */
     public function delete(): void
     {
-        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-            header('Location: /'); 
-            exit; 
-        }
-
         if (!isset($_GET['id'])) {
             $_SESSION['flash_error'] = "ID de page manquant.";
             header('Location: /index-page');
             exit;
         }
 
-        $pageId = (int)$_GET['id'];
-        $currentUserId = $_SESSION['user_id'];; 
-        $isAdmin = false;   
+        $idPage = (int)$_GET['id'];
+        $idUserConnecte = 1; 
+        $estAdmin = false;   
 
-        $page = $this->pageRepository->findById($pageId);
+        $page = $this->repo->findById($idPage);
 
         if (!$page) {
             $_SESSION['flash_error'] = "Page introuvable.";
@@ -153,13 +142,13 @@ class PageController
             // ERREUR : Page publiée
             $_SESSION['flash_error'] = "Impossible de supprimer une page publiée. Dépubliez-la d'abord.";
         } 
-        elseif ($page->getIdUtilisateur() !== $currentUserId && !$isAdmin) {
+        elseif ($page->getIdUtilisateur() !== $idUserConnecte && !$estAdmin) {
             // ERREUR : Pas propriétaire
             $_SESSION['flash_error'] = "Action interdite : Vous n'êtes pas le propriétaire.";
         } 
         else {
             // SUCCÈS
-            $this->pageRepository->deletePage($pageId);
+            $this->repo->deletePage($idPage);
             $_SESSION['flash_success'] = "Page supprimée avec succès.";
         }
         
@@ -169,35 +158,30 @@ class PageController
 
     public function publication():void
     {
-        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-            header('Location: /'); 
-            exit; 
-        }
-
         if (!isset($_GET['id'])) {
             $_SESSION['flash_error'] = "ID de page manquant.";
             header('Location: /index-page');
             exit;
         }
 
-        $pageId = (int)$_GET['id'];
-        $currentUserId = $_SESSION['user_id'];; 
-        $isAdmin = false;   
+        $idPage = (int)$_GET['id'];
+        $idUserConnecte = 1; 
+        $estAdmin = false;   
 
-        $page = $this->pageRepository->findById($pageId);
+        $page = $this->repo->findById($idPage);
 
         if (!$page) {
             $_SESSION['flash_error'] = "Page introuvable.";
             header('Location: /index-page');
             exit;
         }
-        elseif ($page->getIdUtilisateur() !== $currentUserId && !$isAdmin) {
+        elseif ($page->getIdUtilisateur() !== $idUserConnecte && !$estAdmin) {
             // ERREUR : Pas propriétaire
             $_SESSION['flash_error'] = "Action interdite : Vous n'êtes pas le propriétaire.";
         } 
         else {
             // SUCCÈS
-            $this->pageRepository->updateStatus($pageId);
+            $this->repo->updateStatus($idPage);
             $_SESSION['flash_success'] = "Page publier/Dépublier avec succès.";
         }
         
@@ -207,21 +191,17 @@ class PageController
 
     public function update(): void
     {
-        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-            header('Location: /'); 
-            exit; 
-        }
-
+        // 1. Vérification de l'ID dans l'URL (ex: /page/edit?id=12)
         if (!isset($_GET['id'])) {
             $_SESSION['flash_error'] = "ID manquant.";
             header('Location: /index-page');
             exit;
         }
-        $userId = $_SESSION['user_id']; 
 
-        $pageId = (int)$_GET['id'];
+        $idPage = (int)$_GET['id'];
         
-        $existingPage = $this->pageRepository->findById($pageId,$userId);
+        // 2. On récupère la page existante en BDD
+        $existingPage = $this->repo->findById($idPage);
 
         if (!$existingPage) {
             $_SESSION['flash_error'] = "Page introuvable.";
@@ -231,33 +211,33 @@ class PageController
 
         // --- Initialisation des variables pour la vue ---
         // Par défaut, on pré-remplit avec les données de la base
-        $title = $existingPage->getTitre();
+        $titre = $existingPage->getTitre();
         $slug = $existingPage->getSlug();
-        $content = $existingPage->getContenu();
-        $isPublished = $existingPage->isEstPublie();
+        $contenu = $existingPage->getContenu();
+        $estPublie = $existingPage->isEstPublie();
         
         $message = "";
-        $errors = [];
+        $erreurs = [];
 
         // 3. TRAITEMENT DU FORMULAIRE (POST)
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // On écrase les variables avec ce que l'utilisateur vient de taper
-            $title = $_POST['titre'] ?? '';
+            $titre = $_POST['titre'] ?? '';
             $slug = $_POST['slug'] ?? '';
-            $content = $_POST['contenu'] ?? '';
-            $isPublished = isset($_POST['publie']);
+            $contenu = $_POST['contenu'] ?? '';
+            $estPublie = isset($_POST['publie']);
 
             // On crée un objet Page avec les nouvelles données pour valider
             // (On garde le même ID utilisateur que l'original)
-            $pageUpdate = new Page($title, $slug, $content, $existingPage->getIdUtilisateur(), $isPublished);
+            $pageUpdate = new Page($titre, $slug, $contenu, $existingPage->getIdUtilisateur(), $estPublie);
             
             // IMPORTANT : On doit remettre l'ID de la page pour que le Repository sache laquelle modifier
-            $pageUpdate->setIdPage($pageId);
+            $pageUpdate->setIdPage($idPage);
 
             if (empty($pageUpdate->getErreurs())) {
                 try {
-                    $this->pageRepository->updatePage($pageUpdate);
+                    $this->repo->updatePage($pageUpdate);
 
                     // Succès -> Redirection
                     $_SESSION['flash_success'] = "✅ Page modifiée avec succès !";
@@ -269,28 +249,28 @@ class PageController
                 }
             } else {
                 $message = "Veuillez corriger les erreurs.";
-                $errors = $pageUpdate->getErreurs();
+                $erreurs = $pageUpdate->getErreurs();
             }
         }
 
         // 4. PRÉPARATION DE LA VUE
-        $renderer = new Render('page/udapte-page', 'backoffice');
+        // On utilise un fichier dédié 'modifier.php' (ou on pourrait réutiliser creer.php)
+        $render = new Render('page/udapte-page', 'backoffice');
 
         // On passe l'ID pour que le formulaire sache où poster (ou pour le lien retour)
         // (string) car Render est strict
-        $renderer->assign('id_page', (string)$pageId); 
+        $render->assign('id_page', (string)$idPage); 
         
-        $renderer->assign('titre', $title);
-        $renderer->assign('slug', $slug);
-        $renderer->assign('contenu', $content);
-        $renderer->assign('publie_etat', $isPublished ? 'checked' : '');
+        $render->assign('titre', $titre);
+        $render->assign('slug', $slug);
+        $render->assign('contenu', $contenu);
+        $render->assign('publie_etat', $estPublie ? 'checked' : '');
         
-        $renderer->assign('message', $message);
-        $renderer->assign('error_titre',   $errors['titre'] ?? '');
-        $renderer->assign('error_slug',    $errors['slug'] ?? '');
-        $renderer->assign('error_contenu', $errors['contenu'] ?? '');
+        $render->assign('message', $message);
+        $render->assign('error_titre',   $erreurs['titre'] ?? '');
+        $render->assign('error_slug',    $erreurs['slug'] ?? '');
+        $render->assign('error_contenu', $erreurs['contenu'] ?? '');
 
-        $renderer->render();
+        $render->render();
     }
-
 }

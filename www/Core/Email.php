@@ -30,7 +30,7 @@ class Email
     public function sendVerificationEmail($toEmail, $toName, $verificationToken)
     {
         try {
-            $verificationLink = "http://localhost:8080/verify-email?token=" . $verificationToken;
+            $verificationLink = "http://localhost:8081/verify-email?token=" . $verificationToken;
 
             $this->mailer->addAddress($toEmail, $toName);
             $this->mailer->isHTML(true);
@@ -55,8 +55,7 @@ class Email
     public function sendPasswordResetEmail($toEmail, $toName, $resetToken)
     {
         try {
-            $resetLink = "http://localhost:8080/reset-password?token=" . $resetToken;
-            $resetLink = "http://web/reset-password?token=" . $resetToken;
+            $resetLink = "http://localhost:8081/reset-password?token=" . $resetToken;
 
             $this->mailer->addAddress($toEmail, $toName);
             $this->mailer->isHTML(true);

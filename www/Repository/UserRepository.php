@@ -125,7 +125,7 @@ class UserRepository
         return $user;
     }
 
-    private function checkUserStatus(): int 
+private function checkUserStatus(): int 
     {
         $sql = "SELECT count(*) FROM users";
 
@@ -136,5 +136,50 @@ class UserRepository
 
         return ($count > 0) ? 2 : 1;
     }
-}
 
+    public function getUserById($id)
+    {
+        $sql = "SELECT * FROM users WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        
+        return $stmt->fetch();
+    }
+
+    public function getAllUsers()
+    {
+        $sql = "SELECT * FROM users";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        
+        return $stmt->fetchAll();
+    }
+
+    public function updateUser($id, $roleId, $isActive)
+    {
+        $sql = "UPDATE users SET id_role = ?, is_active = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$roleId, $isActive, $id]);
+        
+        return $stmt->rowCount() > 0;
+    }
+
+    public function deleteUser($id)
+    {
+        $sql = "DELETE FROM users WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        
+        return $stmt->rowCount() > 0;
+    }
+
+    public function hasPublishedArticles($userId)
+    {
+        $sql = "SELECT COUNT(*) FROM article WHERE id_utilisateur = ? AND est_publie = true";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$userId]);
+        
+        $count = (int) $stmt->fetchColumn();
+        return $count > 0;
+    }
+}

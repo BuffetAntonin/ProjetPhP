@@ -58,6 +58,18 @@
   controller: PageController
   action: update
 
+/users-management:
+  controller: Auth
+  action: usersManagement
+
+/edit-user:
+  controller: Auth
+  action: editUser
+
+/delete-user:
+  controller: Auth
+  action: deleteUser
+
 /creer-article:
   controller: ArticleController
   action: insert

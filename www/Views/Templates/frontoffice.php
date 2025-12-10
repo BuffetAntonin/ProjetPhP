@@ -5,9 +5,12 @@
     </head>
     <body>
         <h1>Welcome to the Frontoffice</h1>
-        <p>Page Public sans besion de se connecter</p>
+        <p>This is the WEBSITE</p>
 
         <?php include $this->viewPath;?>
 
+        <footer>
+            <marquee>© Buffet</marquee>
+        </footer>
     </body>
 </html>

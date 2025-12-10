@@ -239,4 +239,120 @@ class Auth
         }
         echo "</pre>";
     }
+
+    public function usersManagement(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /login');
+            exit;
+        }
+
+        // Check if user is admin (id_role = 1)
+        $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
+        if (!$currentUser || $currentUser['id_role'] != 1) {
+            die("Accès refusé. Seuls les administrateurs peuvent gérer les utilisateurs.");
+        }
+
+        // Get all users
+        $users = $this->userModel->getAllUsers();
+
+        $error = null;
+        $success = null;
+
+        if (isset($_GET['error']) && $_GET['error'] === 'published_articles') {
+            $error = "Impossible de supprimer cet utilisateur car il a des articles publiés.";
+        }
+
+        if (isset($_GET['success']) && $_GET['success'] === 'user_deleted') {
+            $success = "Utilisateur supprimé avec succès!";
+        }
+
+        $render = new Render("users_management", "backoffice");
+        $render->assign("users", $users);
+        $render->assign("error", $error);
+        $render->assign("success", $success);
+        $render->render();
+    }
+
+    public function editUser(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /login');
+            exit;
+        }
+
+        // Check if user is admin
+        $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
+        if (!$currentUser || $currentUser['id_role'] != 1) {
+            die("Accès refusé.");
+        }
+
+        $userId = $_GET['id'] ?? null;
+        $error = null;
+        $success = null;
+
+        if (!$userId) {
+            $error = "ID utilisateur manquant";
+        } else {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $newRole = $_POST['role'] ?? null;
+                $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+                if ($newRole === null) {
+                    $error = "Le rôle est obligatoire";
+                } else {
+                    $this->userModel->updateUser($userId, $newRole, $isActive);
+                    $success = "Utilisateur mis à jour avec succès!";
+                }
+            }
+
+            $user = $this->userModel->getUserById($userId);
+        }
+
+        $render = new Render("edit_user", "backoffice");
+        $render->assign("user", $user ?? null);
+        $render->assign("error", $error);
+        $render->assign("success", $success);
+        $render->render();
+    }
+
+    public function deleteUser(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /login');
+            exit;
+        }
+
+        // Check if user is admin
+        $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
+        if (!$currentUser || $currentUser['id_role'] != 1) {
+            die("Accès refusé.");
+        }
+
+        $userId = $_GET['id'] ?? null;
+        $error = null;
+        $success = null;
+
+        if (!$userId) {
+            $error = "ID utilisateur manquant";
+        } else {
+            // Check if user has published articles
+            if ($this->userModel->hasPublishedArticles($userId)) {
+                $error = "Impossible de supprimer cet utilisateur car il a des articles publiés.";
+            } else {
+                $this->userModel->deleteUser($userId);
+                $success = "Utilisateur supprimé avec succès!";
+                header('Location: /users-management?success=user_deleted');
+                exit;
+            }
+        }
+
+        $render = new Render("delete_user", "backoffice");
+        $render->assign("error", $error);
+        $render->assign("success", $success);
+        $render->render();
+    }
 }

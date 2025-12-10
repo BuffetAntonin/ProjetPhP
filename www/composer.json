@@ -1,10 +1,6 @@
 {
     "require": {
-<<<<<<< HEAD
-        "phpmailer/phpmailer": "^7.0"
-=======
         "phpmailer/phpmailer": "^7.0",
         "symfony/yaml": "^6.0"
->>>>>>> 12515dcc3e67585c9fde818c79c2626792090f7b
     }
 }

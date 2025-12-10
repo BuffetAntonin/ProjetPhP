@@ -19,12 +19,4 @@
     </ul>
 </nav>
 
-<?php
-
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    echo '<a href="/login">connexion</a>';
-} else {
-    echo '<a href="/dashboard">dashboard</a>';
-}
-?>
-
+<a href="/login">connexion</a>

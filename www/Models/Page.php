@@ -8,6 +8,7 @@ use DateTime;
 
 class Page
 {
+    // Propriétés de la BDD
     private ?int $idPage = null;
     private string $titre = '';
     private string $slug = '';
@@ -17,9 +18,13 @@ class Page
     private DateTime $dateCreation;
     private DateTime $dateModification;
 
+    // Propriété spéciale pour stocker les erreurs
     private array $erreurs = [];
 
-
+    /**
+     * Le constructeur valide tout, mais ne plante pas.
+     * Il stocke les problèmes dans $this->erreurs.
+     */
     public function __construct(
         string $titre, 
         string $slug, 
@@ -41,20 +46,12 @@ class Page
         $this->titre = $titreNettoye;
 
         $slugNettoye = strtolower(trim($slug));
-
         if (empty($slugNettoye)) {
             $this->erreurs['slug'] = "Le slug est obligatoire.";
         } elseif (mb_strlen($slugNettoye) > 255) {
             $this->erreurs['slug'] = "Le slug est trop long.";
         } elseif (!preg_match('/^[a-z0-9-]+$/', $slugNettoye)) {
             $this->erreurs['slug'] = "Le slug contient des caractères interdits (seulement lettres, chiffres, tirets).";
-        } else {
-            $routes = yaml_parse_file("../routes.yml"); 
-            $routesStatiques = array_keys($routes);
-
-            if (in_array('/' . $slugNettoye, $routesStatiques)) {
-                $this->erreurs['slug'] = "Ce slug est réservé";
-            }
         }
         $this->slug = $slugNettoye;
 
