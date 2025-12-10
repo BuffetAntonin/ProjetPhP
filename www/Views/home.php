@@ -19,7 +19,6 @@
     </ul>
 </nav>
 
-<<<<<<< HEAD
 <?php
 
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
@@ -29,7 +28,3 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 }
 ?>
 
-        
-=======
-<a href="/login">connexion</a>
->>>>>>> 12515dcc3e67585c9fde818c79c2626792090f7b
