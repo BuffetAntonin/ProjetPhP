@@ -320,7 +320,10 @@ class Auth
 
     public function deleteUser(): void
     {
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         if (!isset($_SESSION['user_id'])) {
             header('Location: /login');
             exit;
@@ -328,31 +331,34 @@ class Auth
 
         // Check if user is admin
         $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
+        
+        // On garde 'id_role' car c'est la clé de la BDD
         if (!$currentUser || $currentUser['id_role'] != 1) {
             die("Accès refusé.");
         }
 
         $userId = $_GET['id'] ?? null;
-        $error = null;
-        $success = null;
+        $errorMessage = null;
+        $successMessage = null;
 
         if (!$userId) {
-            $error = "ID utilisateur manquant";
+            $errorMessage = "ID utilisateur manquant";
         } else {
-            // Check if user has published articles
-            if ($this->userModel->hasPublishedArticles($userId)) {
-                $error = "Impossible de supprimer cet utilisateur car il a des articles publiés.";
-            } else {
-                $this->userModel->deleteUser($userId);
-                $success = "Utilisateur supprimé avec succès!";
+            $isDeleted = $this->userModel->deleteUser($userId);
+
+            if ($isDeleted) {
+                // SUCCÈS
                 header('Location: /users-management?success=user_deleted');
                 exit;
+            } else {
+                // ÉCHEC (Has pages)
+                $errorMessage = "Impossible de supprimer cet utilisateur car il a des articles/pages publiés.";
             }
         }
 
-        $render = new Render("delete_user", "backoffice");
-        $render->assign("error", $error);
-        $render->assign("success", $success);
-        $render->render();
+        $renderer = new Render("delete_user", "backoffice");
+        $renderer->assign("error", $errorMessage);
+        $renderer->assign("success", $successMessage);
+        $renderer->render();
     }
 }

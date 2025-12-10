@@ -1,18 +1,18 @@
 <?php
 
-// 1. On décode la string JSON reçue du contrôleur
+// 1. Decode JSON string received from Controller
+// variable matches $render->assign('pages_json', ...)
 $pages = json_decode($pages_json ?? '[]', true);
 
 ?>
 
-<!-- Affichage des Messages Flash (Succès ou Erreur) -->
 <?php if (!empty($flash_message)): ?>
     <?php 
-        // On choisit la couleur : Rouge si erreur, Vert si succès
+        // Choose color: Red for error, Green for success
         $isError = (isset($flash_type) && $flash_type === 'error');
         $style = $isError 
-            ? 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' // Rouge
-            : 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;'; // Vert
+            ? 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' // Red
+            : 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;'; // Green
     ?>
     <div style="<?= $style ?> padding: 15px; margin-bottom: 20px; border-radius: 4px; text-align: center;">
         <?= htmlspecialchars($flash_message) ?>
@@ -49,15 +49,15 @@ $pages = json_decode($pages_json ?? '[]', true);
             <?php foreach ($pages as $page): ?>
                 <tr>
                     <td>
-                        <!-- Valeur invisible contenant l'ID de la page -->
                         <input type="hidden" class="page-id-hidden" value="<?= $page['id'] ?>">
-                        <strong><?= htmlspecialchars($page['titre']) ?></strong>
+                        
+                        <strong><?= htmlspecialchars($page['title']) ?></strong>
                     </td>
                     <td>
                         <small>/<?= htmlspecialchars($page['slug']) ?></small>
                     </td>
                     <td>
-                        <?php if ($page['est_publie']): ?>
+                        <?php if ($page['is_published']): ?>
                             <span style="color:green; font-weight:bold;">Publié</span>
                         <?php else: ?>
                             <span style="color:orange; font-weight:bold;">Brouillon</span>
@@ -65,24 +65,22 @@ $pages = json_decode($pages_json ?? '[]', true);
                     </td>
                     <td class="actions-cell">
                         &nbsp;
-                        <!-- Bouton Publier/Dépublier -->
                         <form action="/publication" method="get" style="display:inline-block;">
                             <input type="hidden" name="id" value="<?= $page['id'] ?>">
-                            <button type="submit" class="btn-action btn-delete" style="color:blue; cursor:pointer; background:none; border:none; padding:0; font:inherit; text-decoration: underline;">
-                                <?= $page['est_publie'] ? 'Dépublier' : 'Publier' ?>
+                            <button type="submit" class="btn-action" style="color:blue; cursor:pointer; background:none; border:none; padding:0; font:inherit; text-decoration: underline;">
+                                <?= $page['is_published'] ? 'Dépublier' : 'Publier' ?>
                             </button>
                         </form>
                         &nbsp;&nbsp;
-                        <!-- Bouton Modifier -->
+                        
                         <form action="/update-page" method="get" style="display:inline-block;">
                             <input type="hidden" name="id" value="<?= $page['id'] ?>">
-                            <button type="submit" class="btn-action btn-delete" style="color:blue; cursor:pointer; background:none; border:none; padding:0; font:inherit; text-decoration: underline;">
+                            <button type="submit" class="btn-action" style="color:blue; cursor:pointer; background:none; border:none; padding:0; font:inherit; text-decoration: underline;">
                                 Modifier
                             </button>
                         </form>
                         &nbsp;&nbsp;
                         
-                        <!-- FORMULAIRE DE SUPPRESSION -->
                         <form action="/supprime-page" method="get" style="display:inline-block;">
                             <input type="hidden" name="id" value="<?= $page['id'] ?>">
                             <button type="submit" class="btn-action btn-delete" style="color:red; cursor:pointer; background:none; border:none; padding:0; font:inherit; text-decoration: underline;">
@@ -99,4 +97,4 @@ $pages = json_decode($pages_json ?? '[]', true);
 
 <a href="/">Accueil</a>
 <br>
-<a href="/dashboard">dashboard</a>
+<a href="/dashboard">Dashboard</a>
