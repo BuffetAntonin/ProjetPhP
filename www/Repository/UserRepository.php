@@ -125,11 +125,7 @@ class UserRepository
         return $user;
     }
 
-<<<<<<< HEAD
     private function checkUserStatus(): int 
-=======
-private function checkUserStatus(): int 
->>>>>>> 12515dcc3e67585c9fde818c79c2626792090f7b
     {
         $sql = "SELECT count(*) FROM users";
 
@@ -140,8 +136,5 @@ private function checkUserStatus(): int
 
         return ($count > 0) ? 2 : 1;
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 12515dcc3e67585c9fde818c79c2626792090f7b
+
