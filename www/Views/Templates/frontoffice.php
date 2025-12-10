@@ -10,7 +10,6 @@
         <?php include $this->viewPath;?>
 
         <footer>
-            <marquee>© Buffet</marquee>
         </footer>
     </body>
 </html>
