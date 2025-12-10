@@ -25,7 +25,12 @@ class PageController
      */
     public function index(): void
     {
-        $idUtilisateur = 1;
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            header('Location: /'); 
+            exit; 
+        }
+        
+        $userId = $_SESSION['user_id'];
 
         // 1. Récupération des données
         $pagesObjects = $this->repo->findAllByUserId($idUtilisateur);
@@ -68,6 +73,11 @@ class PageController
      */
     public function insert(): void
     {
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            header('Location: /'); 
+            exit; 
+        }
+
         $render = new Render('page/creer-page', 'backoffice');
 
         $titre = ''; $slug = ''; $contenu = ''; $estPublie = false;
@@ -75,7 +85,7 @@ class PageController
         $erreurs = [];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $idUtilisateur = 1; 
+            $userId = $_SESSION['user_id']; 
             
             $titre = $_POST['titre'] ?? '';
             $slug = $_POST['slug'] ?? '';
@@ -120,6 +130,11 @@ class PageController
      */
     public function delete(): void
     {
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            header('Location: /'); 
+            exit; 
+        }
+
         if (!isset($_GET['id'])) {
             $_SESSION['flash_error'] = "ID de page manquant.";
             header('Location: /index-page');
@@ -127,10 +142,10 @@ class PageController
         }
 
         $idPage = (int)$_GET['id'];
-        $idUserConnecte = 1; 
+        $currentUserId = $_SESSION['user_id'];; 
         $estAdmin = false;   
 
-        $page = $this->repo->findById($idPage);
+        $page = $this->repo->findById($idPage,$currentUserId);
 
         if (!$page) {
             $_SESSION['flash_error'] = "Page introuvable.";
@@ -142,7 +157,7 @@ class PageController
             // ERREUR : Page publiée
             $_SESSION['flash_error'] = "Impossible de supprimer une page publiée. Dépubliez-la d'abord.";
         } 
-        elseif ($page->getIdUtilisateur() !== $idUserConnecte && !$estAdmin) {
+        elseif ($page->getIdUtilisateur() !== $currentUserId && !$estAdmin) {
             // ERREUR : Pas propriétaire
             $_SESSION['flash_error'] = "Action interdite : Vous n'êtes pas le propriétaire.";
         } 
@@ -158,6 +173,11 @@ class PageController
 
     public function publication():void
     {
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            header('Location: /'); 
+            exit; 
+        }
+
         if (!isset($_GET['id'])) {
             $_SESSION['flash_error'] = "ID de page manquant.";
             header('Location: /index-page');
@@ -165,17 +185,17 @@ class PageController
         }
 
         $idPage = (int)$_GET['id'];
-        $idUserConnecte = 1; 
+        $currentUserId = $_SESSION['user_id'];; 
         $estAdmin = false;   
 
-        $page = $this->repo->findById($idPage);
+        $page = $this->repo->findById($idPage,$currentUserId);
 
         if (!$page) {
             $_SESSION['flash_error'] = "Page introuvable.";
             header('Location: /index-page');
             exit;
         }
-        elseif ($page->getIdUtilisateur() !== $idUserConnecte && !$estAdmin) {
+        elseif ($page->getIdUtilisateur() !== $currentUserId && !$estAdmin) {
             // ERREUR : Pas propriétaire
             $_SESSION['flash_error'] = "Action interdite : Vous n'êtes pas le propriétaire.";
         } 
@@ -191,6 +211,12 @@ class PageController
 
     public function update(): void
     {
+
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            header('Location: /'); 
+            exit; 
+        }
+        
         // 1. Vérification de l'ID dans l'URL (ex: /page/edit?id=12)
         if (!isset($_GET['id'])) {
             $_SESSION['flash_error'] = "ID manquant.";
@@ -201,7 +227,7 @@ class PageController
         $idPage = (int)$_GET['id'];
         
         // 2. On récupère la page existante en BDD
-        $existingPage = $this->repo->findById($idPage);
+        $existingPage = $this->repo->findById($idPage,$currentUserId);
 
         if (!$existingPage) {
             $_SESSION['flash_error'] = "Page introuvable.";
