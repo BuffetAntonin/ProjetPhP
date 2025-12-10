@@ -23,16 +23,20 @@ class UserRepository
 
     public function register($email, $name, $password)
     {
+        // 1. On appelle la fonction pour définir le rôle
+        // Si la base est vide, $roleId sera 1 (Admin). Sinon, ce sera 2 (Utilisateur standard).
+        $roleId = $this->checkUserStatus();
+
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $activationToken = bin2hex(random_bytes(32));
 
-        $sql = "INSERT INTO users (email, name, password_hash, activation_token, is_active) VALUES (?, ?, ?, ?, 0)";
+        $sql = "INSERT INTO users (id_role, email, name, password_hash, activation_token, is_active) VALUES (?, ?, ?, ?, ?, 0)";
+
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$email, $name, $hashedPassword, $activationToken]);
+        $stmt->execute([$roleId, $email, $name, $hashedPassword, $activationToken]);
 
         return $activationToken;
     }
-
     public function getUserByEmail($email)
     {
         $sql = "SELECT * FROM users WHERE email = ?";
@@ -64,7 +68,7 @@ class UserRepository
     {
         $resetToken = bin2hex(random_bytes(32));
         
-        $sql = "UPDATE users SET reset_token = ?, reset_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE email = ?";
+        $sql = "UPDATE users SET reset_token = ?, reset_expires = NOW() + INTERVAL '1 hour' WHERE email = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$resetToken, $email]);
 
@@ -119,5 +123,17 @@ class UserRepository
         $user = $stmt->fetch(); 
 
         return $user;
+    }
+
+private function checkUserStatus(): int 
+    {
+        $sql = "SELECT count(*) FROM users";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+
+        $count = (int) $stmt->fetchColumn(); 
+
+        return ($count > 0) ? 2 : 1;
     }
 }

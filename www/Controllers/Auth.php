@@ -56,16 +56,26 @@ class Auth
             $password = $_POST['password'] ?? '';
             $confirmPassword = $_POST['confirm_password'] ?? '';
 
-            if (empty($email) || empty($name) || empty($password)) {
-                $error = "Tous les champs sont obligatoires";
-            } elseif ($password !== $confirmPassword) {
-                $error = "Les mots de passe ne correspondent pas";
-            } elseif (strlen($password) < 6) {
-                $error = "Le mot de passe doit contenir au moins 6 caractères";
+            // Email format validation
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = "Le format de l'email est invalide";
             } elseif ($this->userModel->getUserByEmail($email)) {
-                $error = "Cet email est déjà utilisé";
+                $error = "L'email existe déjà";
+            } elseif (empty($name)) {
+                $error = "Le nom d'utilisateur est obligatoire";
             } elseif ($this->userModel->getUserByName($name)) {
                 $error = "Ce nom d'utilisateur est déjà utilisé";
+            } elseif (empty($password)) {
+                $error = "Le mot de passe est obligatoire";
+            } elseif ($password !== $confirmPassword) {
+                $error = "Les mots de passe ne correspondent pas";
+            } elseif (strlen($password) < 8 ||
+                      !preg_match('#[A-Z]#', $password) ||
+                      !preg_match('#[a-z]#', $password) ||
+                      !preg_match('#[0-9]#', $password) ||
+                      !preg_match('/[!@#$%^&*()\-_+=\[\]{};:\'",.<>?\\/|`~]/', $password)) {
+
+                $error = "Le mot de passe doit faire au moins 8 caractères avec une minuscule, une majuscule, un chiffre et un caractère spécial";
             } else {
                 $activationToken = $this->userModel->register($email, $name, $password);
                 

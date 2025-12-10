@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: php-apache
     ports:
-      - "8080:80"             # Accès HTTP à Apache -> http://localhost:8080
+      - "8081:80"             # Accès HTTP à Apache -> http://localhost:8081
     volumes:
       - ./www:/var/www/html:cached  # ton code PHP (www/)
       - ./php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
