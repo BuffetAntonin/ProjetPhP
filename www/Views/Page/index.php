@@ -1,4 +1,5 @@
 <?php
+
 // 1. On décode la string JSON reçue du contrôleur
 $pages = json_decode($pages_json ?? '[]', true);
 ?>
@@ -23,10 +24,6 @@ $pages = json_decode($pages_json ?? '[]', true);
     <div class="actions">
         <a href="/cree-page" class="btn btn-primary">
             + Créer une Page
-        </a>
-        &nbsp;&nbsp;
-        <a href="/creer-article" class="btn btn-secondary disabled">
-            + Créer un Article
         </a>
     </div>
 </div>
@@ -100,3 +97,5 @@ $pages = json_decode($pages_json ?? '[]', true);
 </table>
 
 <a href="/">Accueil</a>
+<br>
+<a href="/dashboard">dashboard</a>

@@ -52,11 +52,12 @@ class PageRepository
         }
     }
 
-    public function findById(int $idPage): ?Page
+    public function findById(int $idPage , int $idUser): ?Page
     {
-        $sql = "SELECT * FROM public.page WHERE id_page = :id";
+        $sql = "SELECT * FROM public.page WHERE id_page = :id and id_utilisateur = :idUser";
         $stmt = $this->db->prepare($sql);
         // Utilisation de bindValue pour forcer le type entier
+        $stmt->bindValue(':idUser', $idUser, PDO::PARAM_INT);
         $stmt->bindValue(':id', $idPage, PDO::PARAM_INT);
         $stmt->execute();
         
@@ -75,26 +76,46 @@ class PageRepository
         return $p;
     }
 
-    public function findAllByUserId(int $idUser): array
+    public function findAllByUserId(int $userId): array
     {
-        $sql = "SELECT * FROM public.page WHERE id_utilisateur = :id ORDER BY date_creation DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $idUser, PDO::PARAM_INT);
-        $stmt->execute();
+        // 1. On récupère d'abord le rôle de l'utilisateur
+        $roleSql = "SELECT id_role FROM public.users WHERE id = :id";
+        $roleStmt = $this->db->prepare($roleSql);
+        $roleStmt->execute([':id' => $userId]);
         
-        $pages = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $p = new Page(
+        // fetchColumn récupère directement la valeur de id_role
+        $roleId = (int) $roleStmt->fetchColumn();
+
+        // 2. On prépare la requête pour les pages selon le rôle
+        if ($roleId === 1) {
+            // C'est un ADMIN : On prend TOUT (pas de WHERE)
+            $sql = "SELECT * FROM public.page ORDER BY date_creation DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+        } else {
+            // C'est un USER normal : On filtre par son ID
+            $sql = "SELECT * FROM public.page WHERE id_utilisateur = :id ORDER BY date_creation DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':id', $userId, \PDO::PARAM_INT);
+            $stmt->execute();
+        }
+        
+        $pagesList = [];
+        
+        while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            $pageObject = new Page(
                 $row['titre'],
                 $row['slug'],
                 $row['contenu'],
                 $row['id_utilisateur'],
                 $row['est_publie']
             );
-            $p->setIdPage($row['id_page']);
-            $pages[] = $p;
+            $pageObject->setIdPage($row['id_page']);
+            
+            $pagesList[] = $pageObject;
         }
-        return $pages;
+
+        return $pagesList;
     }
 
     public function deletePage(int $idPage): bool
@@ -127,7 +148,7 @@ class PageRepository
     }
 
 
-        public function updatePage(Page $page): bool
+    public function updatePage(Page $page): bool
     {
         // On met à jour le titre, slug, contenu, statut et la date de modif
         // On NE touche PAS à la date de création ni à l'id_utilisateur (le propriétaire ne change pas)

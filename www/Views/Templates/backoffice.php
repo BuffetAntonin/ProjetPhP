@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1>Welcome to the Backoffice</h1>
-    <p>This is a secure area for authorized personnel only.</p>
+    <p>Page Priver besion de se connecter</p>
 
     <?php include $this->viewPath;?>
 </body>
