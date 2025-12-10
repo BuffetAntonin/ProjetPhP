@@ -10,7 +10,7 @@ use App\Repository\Connexion;
 
 class PageRepository
 {
-    // Instance unique (Singleton)
+    // Unique Instance (Singleton)
     private static ?PageRepository $instance = null;
     private PDO $db;
 
@@ -29,18 +29,22 @@ class PageRepository
 
     public function insertPage(Page $page): bool
     {
+        // SQL remains untouched (French DB columns)
         $sql = 'INSERT INTO public."page" (titre, slug, contenu, id_utilisateur, est_publie, date_creation, date_modification) VALUES (:titre, :slug, :contenu, :id_user, :publie, :cree, :modif)';
 
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':titre',   $page->getTitre());
+            
+            // Binding: SQL params -> English Object Methods
+            $stmt->bindValue(':titre',   $page->getTitle());
             $stmt->bindValue(':slug',    $page->getSlug());
-            $stmt->bindValue(':contenu', $page->getContenu());
-            $stmt->bindValue(':id_user', $page->getIdUtilisateur(), PDO::PARAM_INT);
-            // PostgreSQL comprend très bien les booléens via PDO::PARAM_BOOL
-            $stmt->bindValue(':publie',  $page->isEstPublie(), PDO::PARAM_BOOL);
-            $stmt->bindValue(':cree',    $page->getDateCreation()->format('Y-m-d H:i:s'));
-            $stmt->bindValue(':modif',   $page->getDateModification()->format('Y-m-d H:i:s'));
+            $stmt->bindValue(':contenu', $page->getContent());
+            $stmt->bindValue(':id_user', $page->getUserId(), PDO::PARAM_INT);
+            $stmt->bindValue(':publie',  $page->isPublished(), PDO::PARAM_BOOL);
+            
+            // Formatting dates
+            $stmt->bindValue(':cree',    $page->getCreatedAt()->format('Y-m-d H:i:s'));
+            $stmt->bindValue(':modif',   $page->getUpdatedAt()->format('Y-m-d H:i:s'));
             
             $stmt->execute();
             return true;
@@ -52,85 +56,110 @@ class PageRepository
         }
     }
 
-    public function findById(int $idPage): ?Page
+    public function findById(int $pageId, int $userId): ?Page
     {
-        $sql = "SELECT * FROM public.page WHERE id_page = :id";
+        // SQL untouched
+        $sql = "SELECT * FROM public.page WHERE id_page = :id and id_utilisateur = :idUser";
+        
         $stmt = $this->db->prepare($sql);
-        // Utilisation de bindValue pour forcer le type entier
-        $stmt->bindValue(':id', $idPage, PDO::PARAM_INT);
+        $stmt->bindValue(':idUser', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $pageId, PDO::PARAM_INT);
         $stmt->execute();
         
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$row) return null;
 
-        $p = new Page(
+        // Hydration: DB columns (French) -> Object Constructor (English logic)
+        $page = new Page(
             $row['titre'],
             $row['slug'],
             $row['contenu'],
             $row['id_utilisateur'],
             $row['est_publie']
         );
-        $p->setIdPage($row['id_page']);
-        return $p;
+        
+        // Set the ID manually as it's not in the constructor
+        $page->setId($row['id_page']);
+        
+        return $page;
     }
 
-    public function findAllByUserId(int $idUser): array
+    public function findAllByUserId(int $userId): array
     {
-        $sql = "SELECT * FROM public.page WHERE id_utilisateur = :id ORDER BY date_creation DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $idUser, PDO::PARAM_INT);
-        $stmt->execute();
+        // 1. Get User Role
+        $roleSql = "SELECT id_role FROM public.users WHERE id = :id";
+        $roleStmt = $this->db->prepare($roleSql);
+        $roleStmt->execute([':id' => $userId]);
         
-        $pages = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $p = new Page(
+        $roleId = (int) $roleStmt->fetchColumn();
+
+        // 2. Prepare Query based on role
+        if ($roleId === 1) {
+            // ADMIN: Get everything
+            $sql = "SELECT * FROM public.page ORDER BY date_creation DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+        } else {
+            // USER: Filter by ID
+            $sql = "SELECT * FROM public.page WHERE id_utilisateur = :id ORDER BY date_creation DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':id', $userId, \PDO::PARAM_INT);
+            $stmt->execute();
+        }
+        
+        $pagesList = [];
+        
+        while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            $pageObject = new Page(
                 $row['titre'],
                 $row['slug'],
                 $row['contenu'],
                 $row['id_utilisateur'],
                 $row['est_publie']
             );
-            $p->setIdPage($row['id_page']);
-            $pages[] = $p;
+            $pageObject->setId($row['id_page']);
+            
+            $pagesList[] = $pageObject;
         }
-        return $pages;
+
+        return $pagesList;
     }
 
-    public function deletePage(int $idPage): bool
+    public function deletePage(int $pageId): bool
     {
         $sql = "DELETE FROM public.page WHERE id_page = :id";
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $idPage, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $pageId, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
 
-    public function updateStatus(int $idPage): bool
+    public function updateStatus(int $pageId): bool
     {
-        // 1. On récupère le statut actuel
+        // 1. Get current status
         $sql = "SELECT est_publie FROM public.page WHERE id_page = :id";
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $idPage, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $pageId, PDO::PARAM_INT);
         $stmt->execute();
-        $estPublie = (bool)$stmt->fetchColumn();
+        
+        $isPublished = (bool)$stmt->fetchColumn();
 
-        // 2. On met à jour avec l'INVERSE (not)
+        // 2. Update with inverse value
         $sql = "UPDATE public.page SET est_publie = :etat WHERE id_page = :id";
         $stmt = $this->db->prepare($sql);
         
-        // On utilise bindValue avec PARAM_BOOL pour gérer le booléen proprement
-        $stmt->bindValue(':etat', !$estPublie, PDO::PARAM_BOOL);
-        $stmt->bindValue(':id', $idPage, PDO::PARAM_INT);
+        // Using negation (!) on the boolean variable
+        $stmt->bindValue(':etat', !$isPublished, PDO::PARAM_BOOL);
+        $stmt->bindValue(':id', $pageId, PDO::PARAM_INT);
         
         return $stmt->execute();
     }
 
 
-        public function updatePage(Page $page): bool
+    public function updatePage(Page $page): bool
     {
-        // On met à jour le titre, slug, contenu, statut et la date de modif
-        // On NE touche PAS à la date de création ni à l'id_utilisateur (le propriétaire ne change pas)
+        // SQL untouched
         $sql = 'UPDATE public."page" 
                 SET titre = :titre, 
                     slug = :slug, 
@@ -142,22 +171,22 @@ class PageRepository
         try {
             $stmt = $this->db->prepare($sql);
             
-            $stmt->bindValue(':titre',   $page->getTitre());
+            // English getters used here
+            $stmt->bindValue(':titre',   $page->getTitle());
             $stmt->bindValue(':slug',    $page->getSlug());
-            $stmt->bindValue(':contenu', $page->getContenu());
-            $stmt->bindValue(':publie',  $page->isEstPublie(), PDO::PARAM_BOOL);
+            $stmt->bindValue(':contenu', $page->getContent());
+            $stmt->bindValue(':publie',  $page->isPublished(), PDO::PARAM_BOOL);
             
-            // On met la date de modification à "Maintenant"
+            // Set modification date to "Now"
             $stmt->bindValue(':modif',   date('Y-m-d H:i:s'));
             
-            // L'ID est indispensable pour le WHERE
-            $stmt->bindValue(':id',      $page->getIdPage(), PDO::PARAM_INT);
+            // ID is essential for WHERE clause
+            $stmt->bindValue(':id',      $page->getId(), PDO::PARAM_INT);
 
             $stmt->execute();
             return true;
 
         } catch (PDOException $e) {
-            // Gestion du doublon de Slug (si on renomme vers un slug qui existe déjà)
             if ($e->getCode() === '23505') {
                 throw new Exception("Ce slug est déjà pris par une autre page.");
             }
@@ -168,7 +197,6 @@ class PageRepository
 
     public function findAllPublished(): array
     {
-        // On récupère uniquement celles qui sont publiées (true)
         $sql = "SELECT * FROM public.page WHERE est_publie = true ORDER BY titre ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
@@ -182,7 +210,7 @@ class PageRepository
                 $row['id_utilisateur'],
                 $row['est_publie']
             );
-            $p->setIdPage($row['id_page']);
+            $p->setId($row['id_page']);
             $pages[] = $p;
         }
         return $pages;
@@ -206,8 +234,7 @@ class PageRepository
             $row['id_utilisateur'],
             $row['est_publie']
         );
-        $p->setIdPage($row['id_page']);
+        $p->setId($row['id_page']);
         return $p;
     }
-
 }

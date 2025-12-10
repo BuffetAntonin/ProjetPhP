@@ -164,22 +164,31 @@ private function checkUserStatus(): int
         return $stmt->rowCount() > 0;
     }
 
-    public function deleteUser($id)
+    public function deleteUser($userId)
     {
+        // 1. Vérification : On regarde si l'utilisateur a des pages
+        // Si true, on ne supprime pas et on retourne false
+        if ($this->hasPublishedPage($userId)) {
+            return false;
+        }
+
+        // 2. Suppression : Si aucune page, on procède
         $sql = "DELETE FROM users WHERE id = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$id]);
-        
-        return $stmt->rowCount() > 0;
+        $statement = $this->db->prepare($sql);
+        $statement->execute([$userId]);
+
+        return $statement->rowCount() > 0;
     }
 
-    public function hasPublishedArticles($userId)
+    public function hasPublishedPage($userId)
     {
-        $sql = "SELECT COUNT(*) FROM article WHERE id_utilisateur = ? AND est_publie = true";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$userId]);
-        
-        $count = (int) $stmt->fetchColumn();
+        // Note : Cette requête compte TOUTES les pages (publiées ou brouillons)
+        $sql = "SELECT COUNT(*) FROM page WHERE id_utilisateur = ?";
+        $statement = $this->db->prepare($sql);
+        $statement->execute([$userId]);
+
+        $count = (int) $statement->fetchColumn();
+
         return $count > 0;
     }
 }

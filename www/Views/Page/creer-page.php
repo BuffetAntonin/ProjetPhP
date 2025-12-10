@@ -10,10 +10,10 @@
     
     <div class="form-group">
         <label>Titre</label>
-        <input type="text" name="titre" value="<?= htmlspecialchars($titre) ?>">
+        <input type="text" name="title" value="<?= htmlspecialchars($title) ?>">
         
-        <?php if (!empty($error_titre)): ?>
-            <small class="error" style="color:red"><?= $error_titre ?></small>
+        <?php if (!empty($error_title)): ?>
+            <small class="error" style="color:red"><?= $error_title ?></small>
         <?php endif; ?>
     </div>
 
@@ -27,15 +27,15 @@
 
     <div class="form-group">
         <label>Contenu</label>
-        <textarea name="contenu" rows="5"><?= htmlspecialchars($contenu) ?></textarea>
-        <?php if (!empty($error_contenu)): ?>
-            <small class="error" style="color:red"><?= $error_contenu ?></small>
+        <textarea name="content" rows="5"><?= htmlspecialchars($content) ?></textarea>
+        <?php if (!empty($error_content)): ?>
+            <small class="error" style="color:red"><?= $error_content ?></small>
         <?php endif; ?>
     </div>
 
     <div class="form-group">
         <label>
-            <input type="checkbox" name="publie" <?= $publie_etat ?>> Publier immédiatement
+            <input type="checkbox" name="published" <?= $published_state ?>> Publier immédiatement
         </label>
     </div>
     

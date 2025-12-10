@@ -4,102 +4,100 @@ namespace App\Models;
 
 use DateTime;
 
-
-
 class Page
 {
-    // Propriétés de la BDD
-    private ?int $idPage = null;
-    private string $titre = '';
+    // DB Properties
+    private ?int $id = null; // "idPage" devient "id" (standard)
+    private string $title = '';
     private string $slug = '';
-    private string $contenu = '';
-    private int $idUtilisateur = 0;
-    private bool $estPublie = false;
-    private DateTime $dateCreation;
-    private DateTime $dateModification;
+    private string $content = '';
+    private int $userId = 0;
+    private bool $isPublished = false;
+    private DateTime $createdAt;
+    private DateTime $updatedAt;
 
-    // Propriété spéciale pour stocker les erreurs
-    private array $erreurs = [];
+    // Special property for errors
+    private array $errors = [];
 
     /**
-     * Le constructeur valide tout, mais ne plante pas.
-     * Il stocke les problèmes dans $this->erreurs.
+     * The constructor validates everything but doesn't crash.
+     * It stores issues in $this->errors.
      */
     public function __construct(
-        string $titre, 
+        string $title, 
         string $slug, 
-        string $contenu, 
-        int $idUtilisateur,
-        bool $estPublie = false
+        string $content, 
+        int $userId,
+        bool $isPublished = false
     ) {
-        if ($idUtilisateur <= 0) {
-            $this->erreurs['id_utilisateur'] = "Utilisateur invalide (ID manquant ou incorrect).";
+        if ($userId <= 0) {
+            $this->errors['user_id'] = "Utilisateur invalide (ID manquant ou incorrect).";
         }
-        $this->idUtilisateur = $idUtilisateur;
+        $this->userId = $userId;
 
-        $titreNettoye = trim($titre);
-        if (empty($titreNettoye)) {
-            $this->erreurs['titre'] = "Le titre est obligatoire.";
-        } elseif (mb_strlen($titreNettoye) > 255) {
-            $this->erreurs['titre'] = "Le titre est trop long (max 255 car.).";
+        $cleanedTitle = trim($title);
+        if (empty($cleanedTitle)) {
+            $this->errors['title'] = "Le titre est obligatoire.";
+        } elseif (mb_strlen($cleanedTitle) > 255) {
+            $this->errors['title'] = "Le titre est trop long (max 255 car.).";
         }
-        $this->titre = $titreNettoye;
+        $this->title = $cleanedTitle;
 
-        $slugNettoye = strtolower(trim($slug));
-        if (empty($slugNettoye)) {
-            $this->erreurs['slug'] = "Le slug est obligatoire.";
-        } elseif (mb_strlen($slugNettoye) > 255) {
-            $this->erreurs['slug'] = "Le slug est trop long.";
-        } elseif (!preg_match('/^[a-z0-9-]+$/', $slugNettoye)) {
-            $this->erreurs['slug'] = "Le slug contient des caractères interdits (seulement lettres, chiffres, tirets).";
+        $cleanedSlug = strtolower(trim($slug));
+        if (empty($cleanedSlug)) {
+            $this->errors['slug'] = "Le slug est obligatoire.";
+        } elseif (mb_strlen($cleanedSlug) > 255) {
+            $this->errors['slug'] = "Le slug est trop long.";
+        } elseif (!preg_match('/^[a-z0-9-]+$/', $cleanedSlug)) {
+            $this->errors['slug'] = "Le slug contient des caractères interdits (seulement lettres, chiffres, tirets).";
         }
-        $this->slug = $slugNettoye;
+        $this->slug = $cleanedSlug;
 
-        $contenuNettoye = trim($contenu);
-        if (empty($contenuNettoye)) {
-            $this->erreurs['contenu'] = "Le contenu ne peut pas être vide.";
+        $cleanedContent = trim($content);
+        if (empty($cleanedContent)) {
+            $this->errors['content'] = "Le contenu ne peut pas être vide.";
         }
-        $this->contenu = $contenuNettoye;
+        $this->content = $cleanedContent;
 
-        $this->estPublie = $estPublie;
-        $this->dateCreation = new DateTime();
-        $this->dateModification = new DateTime();
+        $this->isPublished = $isPublished;
+        $this->createdAt = new DateTime();
+        $this->updatedAt = new DateTime();
     }
 
-    public function getErreurs(): array
+    public function getErrors(): array
     {
-        return $this->erreurs;
+        return $this->errors;
     }
 
     // --- Getters & Setters ---
 
-    public function getIdPage(): ?int
+    public function getId(): ?int
     {
-        return $this->idPage;
+        return $this->id;
     }
 
-    public function setIdPage(int $idPage): self
+    public function setId(int $id): self
     {
-        $this->idPage = $idPage;
+        $this->id = $id;
         return $this;
     }
 
-    public function getTitre(): string
+    public function getTitle(): string
     {
-        return $this->titre;
+        return $this->title;
     }
 
-    public function setTitre(string $titre): self
+    public function setTitle(string $title): self
     {
-        $titreNettoye = trim($titre);
+        $cleanedTitle = trim($title);
 
-        if ($titreNettoye === '') {
-            $this->erreurs['titre'] = "Le titre est obligatoire.";
-        } elseif (mb_strlen($titreNettoye) > 255) {
-            $this->erreurs['titre'] = "Le titre est trop long (max 255 car.).";
+        if ($cleanedTitle === '') {
+            $this->errors['title'] = "Le titre est obligatoire.";
+        } elseif (mb_strlen($cleanedTitle) > 255) {
+            $this->errors['title'] = "Le titre est trop long (max 255 car.).";
         } else {
-            $this->titre = $titreNettoye;
-            unset($this->erreurs['titre']); // supprime l'erreur si corrigée
+            $this->title = $cleanedTitle;
+            unset($this->errors['title']); // Remove error if fixed
         }
 
         return $this;
@@ -112,86 +110,85 @@ class Page
 
     public function setSlug(string $slug): self
     {
-        $slugNettoye = strtolower(trim($slug));
+        $cleanedSlug = strtolower(trim($slug));
 
-        if ($slugNettoye === '') {
-            $this->erreurs['slug'] = "Le slug est obligatoire.";
-        } elseif (mb_strlen($slugNettoye) > 255) {
-            $this->erreurs['slug'] = "Le slug est trop long.";
-        } elseif (!preg_match('/^[a-z0-9-]+$/', $slugNettoye)) {
-            $this->erreurs['slug'] = "Le slug contient des caractères interdits (lettres, chiffres, tirets uniquement).";
+        if ($cleanedSlug === '') {
+            $this->errors['slug'] = "Le slug est obligatoire.";
+        } elseif (mb_strlen($cleanedSlug) > 255) {
+            $this->errors['slug'] = "Le slug est trop long.";
+        } elseif (!preg_match('/^[a-z0-9-]+$/', $cleanedSlug)) {
+            $this->errors['slug'] = "Le slug contient des caractères interdits (lettres, chiffres, tirets uniquement).";
         } else {
-            $this->slug = $slugNettoye;
-            unset($this->erreurs['slug']);
+            $this->slug = $cleanedSlug;
+            unset($this->errors['slug']);
         }
 
         return $this;
     }
 
-
-    public function getContenu(): string
+    public function getContent(): string
     {
-        return $this->contenu;
+        return $this->content;
     }
 
-    public function setContenu(string $contenu): self
+    public function setContent(string $content): self
     {
-        $contenuNettoye = trim($contenu);
+        $cleanedContent = trim($content);
 
-        if ($contenuNettoye === '') {
-            $this->erreurs['contenu'] = "Le contenu ne peut pas être vide.";
+        if ($cleanedContent === '') {
+            $this->errors['content'] = "Le contenu ne peut pas être vide.";
         } else {
-            $this->contenu = $contenuNettoye;
-            unset($this->erreurs['contenu']);
+            $this->content = $cleanedContent;
+            unset($this->errors['content']);
         }
 
         return $this;
     }
 
-
-    public function getDateCreation(): ?DateTime
+    public function getCreatedAt(): ?DateTime
     {
-        return $this->dateCreation;
+        return $this->createdAt;
     }
 
-    // Accepte une chaîne (venant de la DB) ou un objet DateTime
-    public function setDateCreation(DateTime $date): self
+    // Accepts string (from DB) or DateTime object
+    public function setCreatedAt($date): self
     {
-        $this->dateCreation = is_string($date) ? new DateTime($date) : $date;
+        // Adaptation du typage pour correspondre à la logique originale
+        $this->createdAt = is_string($date) ? new DateTime($date) : $date;
         return $this;
     }
 
-    public function getDateModification(): ?DateTime
+    public function getUpdatedAt(): ?DateTime
     {
-        return $this->dateModification;
+        return $this->updatedAt;
     }
 
-    public function isEstPublie(): bool
+    // Standard naming convention for booleans is "is..." or "has..."
+    public function isPublished(): bool
     {
-        return $this->estPublie;
+        return $this->isPublished;
     }
 
-    public function setEstPublie(bool $estPublie): self
+    public function setIsPublished(bool $isPublished): self
     {
-        $this->estPublie = $estPublie;
+        $this->isPublished = $isPublished;
         return $this;
     }
 
-    public function getIdUtilisateur(): int
+    public function getUserId(): int
     {
-        return $this->idUtilisateur;
+        return $this->userId;
     }
 
-    public function setIdUtilisateur(int $idUtilisateur): self
+    public function setUserId(int $userId): self
     {
-        if ($idUtilisateur <= 0) {
-            $this->erreurs['id_utilisateur'] = "Utilisateur invalide (ID manquant ou incorrect).";
+        if ($userId <= 0) {
+            $this->errors['user_id'] = "Utilisateur invalide (ID manquant ou incorrect).";
         } else {
-            $this->idUtilisateur = $idUtilisateur;
-            unset($this->erreurs['id_utilisateur']);
+            $this->userId = $userId;
+            unset($this->errors['user_id']);
         }
 
         return $this;
     }
-
 }
