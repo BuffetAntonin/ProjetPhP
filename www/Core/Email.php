@@ -55,7 +55,11 @@ class Email
     public function sendPasswordResetEmail($toEmail, $toName, $resetToken)
     {
         try {
+<<<<<<< HEAD
             $resetLink = "http://localhost:8080/reset-password?token=" . $resetToken;
+=======
+            $resetLink = "http://web/reset-password?token=" . $resetToken;
+>>>>>>> 12515dcc3e67585c9fde818c79c2626792090f7b
 
             $this->mailer->addAddress($toEmail, $toName);
             $this->mailer->isHTML(true);

@@ -2,6 +2,13 @@
 
 // 1. On décode la string JSON reçue du contrôleur
 $pages = json_decode($pages_json ?? '[]', true);
+
+if (isset($_SESSION['user_id'])) {
+    echo("<pre>");
+    print_r ($_SESSION);
+} else {
+    echo "Aucun utilisateur n'est actuellement connecté.";
+}
 ?>
 
 <!-- Affichage des Messages Flash (Succès ou Erreur) -->
