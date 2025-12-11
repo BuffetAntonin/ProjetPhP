@@ -345,7 +345,7 @@ class Auth
                 exit;
             } else {
                 // ÉCHEC
-                $errorMessage = "Impossible de supprimer cet utilisateur car il a des articles/pages publiés.";
+                $errorMessage = "Impossible de supprimer cet utilisateur";
             }
         }
 
