@@ -194,7 +194,7 @@ class PageController
         $page = $this->repo->findById($pageId, $currentUserId);
 
         if (!$page) {
-            $_SESSION['flash_error'] = "Page introuvable.". $pageId." ".$currentUserId;
+            $_SESSION['flash_error'] = "Page introuvable.";
             header('Location: /index-page');
             exit;
         }
