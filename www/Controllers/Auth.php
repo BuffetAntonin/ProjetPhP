@@ -296,19 +296,31 @@ class Auth
         if (!$userId) {
             $error = "ID utilisateur manquant";
         } else {
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $newRole = $_POST['role'] ?? null;
-                $isActive = isset($_POST['is_active']) ? 1 : 0;
+            // Récupère la cible avant le POST pour connaître son rôle actuel
+            $user = $this->userModel->getUserById($userId);
 
-                if ($newRole === null) {
-                    $error = "Le rôle est obligatoire";
-                } else {
-                    $this->userModel->updateUser($userId, $newRole, $isActive);
-                    $success = "Utilisateur mis à jour avec succès!";
+            if (!$user) {
+                $error = "Utilisateur introuvable";
+            } else {
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $newRole = $_POST['role'] ?? null;
+                    $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+                    if ($newRole === null) {
+                        $error = "Le rôle est obligatoire";
+                    } else {
+                        // Empêcher un administrateur connecté de changer son propre rôle
+                        if ((int)$userId === (int)$_SESSION['user_id'] && (int)$newRole !== (int)$user['id_role']) {
+                            $error = "Vous ne pouvez pas modifier votre propre rôle.";
+                        } else {
+                            $this->userModel->updateUser($userId, $newRole, $isActive);
+                            $success = "Utilisateur mis à jour avec succès!";
+                            // Recharger les données utilisateur
+                            $user = $this->userModel->getUserById($userId);
+                        }
+                    }
                 }
             }
-
-            $user = $this->userModel->getUserById($userId);
         }
 
         $render = new Render("edit_user", "backoffice");
