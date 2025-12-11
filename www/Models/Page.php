@@ -43,15 +43,23 @@ class Page
         }
         $this->title = $cleanedTitle;
 
+        
+
+        // 1. Nettoyage de base
         $cleanedSlug = strtolower(trim($slug));
+
+        // 3. Validation (Longueur et présence uniquement)
         if (empty($cleanedSlug)) {
             $this->errors['slug'] = "Le slug est obligatoire.";
-        } elseif (mb_strlen($cleanedSlug) > 255) {
+        } elseif (strlen($cleanedSlug) > 255) {
+            // Attention : urlencode rallonge la chaîne (ex: 1 caractère accentué devient 6 caractères)
             $this->errors['slug'] = "Le slug est trop long.";
-        } elseif (!preg_match('/^[a-z0-9-]+$/', $cleanedSlug)) {
-            $this->errors['slug'] = "Le slug contient des caractères interdits (seulement lettres, chiffres, tirets).";
         }
-        $this->slug = $cleanedSlug;
+
+        // 4. Assignation (S'il n'y a pas d'erreur, on enregistre)
+        if (empty($this->errors['slug'])) {
+            $this->slug = $cleanedSlug;
+        }
 
         $cleanedContent = trim($content);
         if (empty($cleanedContent)) {

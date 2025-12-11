@@ -11,7 +11,7 @@
     <ul>
         <?php foreach($myPages as $page): ?>
             <li>
-                <a href="/<?= htmlspecialchars($page['slug']) ?>">
+                <a href="/<?= htmlspecialchars(urlencode($page['slug'])) ?>">Voir la page</a>
                     <?= htmlspecialchars($page['title']) ?>
                 </a>
             </li>

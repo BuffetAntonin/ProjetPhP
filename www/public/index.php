@@ -54,10 +54,10 @@ if(!empty($routes[$requestUri])){
 else {
     // 2. Si pas trouvé, on regarde si c'est une page dynamique en BDD
     // On doit enlever le slash initial pour chercher le slug (ex: "/test" -> "test")
-    $slug = ltrim($requestUri, '/'); 
-    
+    $slug = ltrim($requestUri, '/');
+    $slug = urldecode($slug); 
     $page = PageRepository::getInstance()->findBySlug($slug);
-
+    //echo($page);
     if($page) {
         // Si la page existe, on force le controller Base et l'action showDynamicPage
         $controllerName = "Base";
@@ -65,6 +65,8 @@ else {
         // Astuce : on passe le slug via $_GET pour le récupérer dans le controller ou on modifie l'appel
         // Pour faire simple ici, modifions l'appel de méthode plus bas
         $paramToPass = $slug; 
+    }else{
+        $controllerName ="";
     }
 }
 
