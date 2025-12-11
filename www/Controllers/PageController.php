@@ -48,7 +48,6 @@ class PageController
 
         $render = new Render('page/index', 'backoffice');
         
-        // --- FLASH MESSAGES MANAGEMENT ---
         $flashMessage = '';
         $flashType = '';
 
@@ -147,7 +146,7 @@ class PageController
 
         $pageId = (int)$_GET['id'];
         $currentUserId = $_SESSION['user_id'];
-        $isAdmin = false;   
+        $isAdmin = $this->repo->isAdmin($currentUserId);   
 
         $page = $this->repo->findById($pageId, $currentUserId);
 
@@ -190,7 +189,7 @@ class PageController
 
         $pageId = (int)$_GET['id'];
         $currentUserId = $_SESSION['user_id'];
-        $isAdmin = false;   
+        $isAdmin = $this->repo->isAdmin($currentUserId);
 
         $page = $this->repo->findById($pageId, $currentUserId);
 
@@ -297,4 +296,6 @@ class PageController
 
         $render->render();
     }
+
+    
 }

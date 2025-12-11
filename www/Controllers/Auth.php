@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Core\Email;
 use App\Core\Render;
+use App\Models\Users; // Importation du Modèle Users
 use App\Repository\UserRepository;
 
 class Auth
@@ -24,19 +25,24 @@ class Auth
             $email = $_POST['email'] ?? '';
             $password = $_POST['password'] ?? '';
 
-            error_log("Login attempt: email='$email', password='$password'");
+            error_log("Login attempt: email='$email'");
 
+            // On récupère l'utilisateur (tableau associatif)
             $user = $this->userModel->getUserByEmail($email);
 
             if ($user && password_verify($password, $user['password_hash']) && $user['is_active']) {
                 if (session_status() === PHP_SESSION_NONE) session_start();
+                
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['name'] = $user['name'];
                 $_SESSION['email'] = $user['email'];
+                // Ajout possible du rôle en session si besoin
+                // $_SESSION['role'] = $user['id_role'];
+
                 header('Location: /dashboard');
                 exit;
             } else {
-                $error = "Email ou mot de passe incorrect";
+                $error = "Email ou mot de passe incorrect, ou compte non activé.";
             }
         }
 
@@ -51,36 +57,37 @@ class Auth
         $success = null;
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
-            $name = $_POST['username'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $confirmPassword = $_POST['confirm_password'] ?? '';
+            
+            // 1. Instanciation du modèle Users.
+            // Le constructeur va valider le format Email, Nom et la complexité du Mot de passe.
+            $user = new Users(
+                $_POST['email'] ?? '',
+                $_POST['username'] ?? '',
+                $_POST['password'] ?? '',
+                $_POST['confirm_password'] ?? ''
+            );
 
-            // Email format validation
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $error = "Le format de l'email est invalide";
-            } elseif ($this->userModel->getUserByEmail($email)) {
+            // 2. On récupère les erreurs de validation du modèle
+            $modelErrors = $user->getErrors();
+
+            if (!empty($modelErrors)) {
+                // S'il y a des erreurs de format, on affiche la première
+                $error = reset($modelErrors);
+            } 
+            // 3. Si le format est OK, on vérifie l'unicité en base de données
+            elseif ($this->userModel->getUserByEmail($user->getEmail())) {
                 $error = "L'email existe déjà";
-            } elseif (empty($name)) {
-                $error = "Le nom d'utilisateur est obligatoire";
-            } elseif ($this->userModel->getUserByName($name)) {
+            } 
+            elseif ($this->userModel->getUserByName($user->getName())) {
                 $error = "Ce nom d'utilisateur est déjà utilisé";
-            } elseif (empty($password)) {
-                $error = "Le mot de passe est obligatoire";
-            } elseif ($password !== $confirmPassword) {
-                $error = "Les mots de passe ne correspondent pas";
-            } elseif (strlen($password) < 8 ||
-                      !preg_match('#[A-Z]#', $password) ||
-                      !preg_match('#[a-z]#', $password) ||
-                      !preg_match('#[0-9]#', $password) ||
-                      !preg_match('/[!@#$%^&*()\-_+=\[\]{};:\'",.<>?\\/|`~]/', $password)) {
-
-                $error = "Le mot de passe doit faire au moins 8 caractères avec une minuscule, une majuscule, un chiffre et un caractère spécial";
-            } else {
-                $activationToken = $this->userModel->register($email, $name, $password);
+            } 
+            else {
+                // 4. Tout est bon, on insère via le Repository
+                // On passe l'objet $user complet
+                $activationToken = $this->userModel->create($user);
                 
-                // Si PHPMailer plante, commente la ligne suivante :
-                $this->emailService->sendVerificationEmail($email, $name, $activationToken);
+                // Envoi de l'email
+                $this->emailService->sendVerificationEmail($user->getEmail(), $user->getName(), $activationToken);
                 
                 $success = "Inscription réussie! Vérifiez votre email pour confirmer votre compte.";
             }
@@ -106,12 +113,10 @@ class Auth
                 $user = $this->userModel->getUserByEmail($email);
                 if ($user) {
                     $resetToken = $this->userModel->requestPasswordReset($email);
-                    
-                    // Si PHPMailer plante, commente la ligne suivante :
                     $this->emailService->sendPasswordResetEmail($email, $user['name'], $resetToken);
-                    
                     $success = "Un email de réinitialisation a été envoyé.";
                 } else {
+                    // Message vague pour la sécurité
                     $success = "Si cet email existe, un lien de réinitialisation a été envoyé.";
                 }
             }
@@ -143,25 +148,6 @@ class Auth
         $render->assign("name", $_SESSION['name']);
         $render->assign("email", $_SESSION['email']);
         $render->render();
-    }
-
-    public function debugDb(): void
-    {
-        echo "<pre style='background:#f0f0f0;padding:20px;'>";
-        echo "=== DATABASE DEBUG ===\n\n";
-
-        $db = \App\Repository\Connexion::getInstance(); 
-
-        try {
-            $stmt = $db->query("SELECT id, email, name FROM users");
-            $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            echo "All users in database:\n";
-            print_r($users);
-        } catch (\Exception $e) {
-            echo "Erreur SQL : " . $e->getMessage();
-        }
-        
-        echo "</pre>";
     }
 
     public function verifyEmail(): void
@@ -202,8 +188,8 @@ class Auth
                 $error = "Tous les champs sont obligatoires";
             } elseif ($password !== $confirmPassword) {
                 $error = "Les mots de passe ne correspondent pas";
-            } elseif (strlen($password) < 6) {
-                $error = "Le mot de passe doit contenir au moins 6 caractères";
+            } elseif (strlen($password) < 8) { // Validation basique ici, car c'est un reset
+                $error = "Le mot de passe doit contenir au moins 8 caractères";
             } else {
                 if ($this->userModel->resetPassword($token, $password)) {
                     $success = "Mot de passe réinitialisé avec succès!";
@@ -222,7 +208,6 @@ class Auth
 
     public function checkPassword(): void
     {
-        // Utilisation de la méthode corrigée dans UserRepository
         $user = $this->userModel->checkPassword();
         
         echo "<pre style='background:#f0f0f0;padding:20px;font-family:monospace;'>";
@@ -230,7 +215,6 @@ class Auth
         
         if ($user) {
             print_r($user);
-            // Petit test rapide si tu passes ?pwd=monmotdepasse dans l'URL
             $testPassword = $_GET['pwd'] ?? 'test123';
             echo "\nTesting password: '$testPassword'\n";
             echo "Verify result: " . (password_verify($testPassword, $user['password_hash']) ? 'TRUE' : 'FALSE') . "\n";
@@ -240,6 +224,8 @@ class Auth
         echo "</pre>";
     }
 
+    // --- GESTION DES UTILISATEURS (ADMIN) ---
+
     public function usersManagement(): void
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
@@ -248,21 +234,15 @@ class Auth
             exit;
         }
 
-        // Check if user is admin (id_role = 1)
+        // Vérification Admin
         $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
         if (!$currentUser || $currentUser['id_role'] != 1) {
             die("Accès refusé. Seuls les administrateurs peuvent gérer les utilisateurs.");
         }
 
-        // Get all users
         $users = $this->userModel->getAllUsers();
-
         $error = null;
         $success = null;
-
-        if (isset($_GET['error']) && $_GET['error'] === 'published_articles') {
-            $error = "Impossible de supprimer cet utilisateur car il a des articles publiés.";
-        }
 
         if (isset($_GET['success']) && $_GET['success'] === 'user_deleted') {
             $success = "Utilisateur supprimé avec succès!";
@@ -283,7 +263,7 @@ class Auth
             exit;
         }
 
-        // Check if user is admin
+        // Vérification Admin
         $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
         if (!$currentUser || $currentUser['id_role'] != 1) {
             die("Accès refusé.");
@@ -296,10 +276,9 @@ class Auth
         if (!$userId) {
             $error = "ID utilisateur manquant";
         } else {
-            // Récupère la cible avant le POST pour connaître son rôle actuel
-            $user = $this->userModel->getUserById($userId);
+            $userTarget = $this->userModel->getUserById($userId);
 
-            if (!$user) {
+            if (!$userTarget) {
                 $error = "Utilisateur introuvable";
             } else {
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -309,14 +288,14 @@ class Auth
                     if ($newRole === null) {
                         $error = "Le rôle est obligatoire";
                     } else {
-                        // Empêcher un administrateur connecté de changer son propre rôle
-                        if ((int)$userId === (int)$_SESSION['user_id'] && (int)$newRole !== (int)$user['id_role']) {
+                        // Empêcher l'auto-rétrogradation de l'admin courant
+                        if ((int)$userId === (int)$_SESSION['user_id'] && (int)$newRole !== (int)$userTarget['id_role']) {
                             $error = "Vous ne pouvez pas modifier votre propre rôle.";
                         } else {
                             $this->userModel->updateUser($userId, $newRole, $isActive);
                             $success = "Utilisateur mis à jour avec succès!";
-                            // Recharger les données utilisateur
-                            $user = $this->userModel->getUserById($userId);
+                            // Recharger les données pour l'affichage
+                            $userTarget = $this->userModel->getUserById($userId);
                         }
                     }
                 }
@@ -324,7 +303,7 @@ class Auth
         }
 
         $render = new Render("edit_user", "backoffice");
-        $render->assign("user", $user ?? null);
+        $render->assign("user", $userTarget ?? null);
         $render->assign("error", $error);
         $render->assign("success", $success);
         $render->render();
@@ -332,45 +311,47 @@ class Auth
 
     public function deleteUser(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
+        if (session_status() === PHP_SESSION_NONE) session_start();
         if (!isset($_SESSION['user_id'])) {
             header('Location: /login');
             exit;
         }
 
-        // Check if user is admin
+        // Vérification Admin
         $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
-        
-        // On garde 'id_role' car c'est la clé de la BDD
         if (!$currentUser || $currentUser['id_role'] != 1) {
             die("Accès refusé.");
         }
 
         $userId = $_GET['id'] ?? null;
         $errorMessage = null;
-        $successMessage = null;
+        // On n'a pas besoin de message de succès ici car on redirige si ça marche, 
+        // mais on doit quand même passer "null" à la vue pour éviter l'erreur "Undefined variable".
 
         if (!$userId) {
             $errorMessage = "ID utilisateur manquant";
         } else {
-            $isDeleted = $this->userModel->deleteUser($userId);
+            if ((int)$userId === (int)$_SESSION['user_id']) {
+                 $error = "Vous ne pouvez pas modifier votre propre rôle.";
+                 $isDeleted = null;
+            } else {
+                $isDeleted = $this->userModel->deleteUser($userId);
+            }
+            
 
             if ($isDeleted) {
-                // SUCCÈS
+                // SUCCÈS : On redirige, donc pas besoin d'afficher la vue
                 header('Location: /users-management?success=user_deleted');
                 exit;
             } else {
-                // ÉCHEC (Has pages)
+                // ÉCHEC
                 $errorMessage = "Impossible de supprimer cet utilisateur car il a des articles/pages publiés.";
             }
         }
 
         $renderer = new Render("delete_user", "backoffice");
         $renderer->assign("error", $errorMessage);
-        $renderer->assign("success", $successMessage);
+        $renderer->assign("success", null); // <--- LIGNE AJOUTÉE POUR CORRIGER LE WARNING
         $renderer->render();
     }
 }

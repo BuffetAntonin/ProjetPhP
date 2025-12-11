@@ -255,4 +255,17 @@ class PageRepository
         $p->setId($row['id_page']);
         return $p;
     }
+
+    public function isAdmin(int $userId): bool
+    {
+        $sql = "SELECT id_role FROM public.users WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $userId]);
+        
+        // On récupère l'ID du rôle
+        $roleId = (int) $stmt->fetchColumn();
+
+        // On retourne true si le rôle est 1 (Admin), sinon false
+        return $roleId === 1;
+    }
 }
