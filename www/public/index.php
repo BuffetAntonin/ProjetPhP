@@ -4,6 +4,9 @@ namespace App;
 
 use App\Controllers\Base;
 use App\Repository\PageRepository;
+// Ensure session cookie is available site-wide and session is started
+\session_set_cookie_params(0, "/");
+\session_start();
 /*
  *
  * TP : Routing
@@ -41,7 +44,7 @@ if(strlen($requestUri)>1)
     $requestUri = rtrim($requestUri, "/");
 $requestUri = strtolower($requestUri);
 
-$routes = yaml_parse_file("../routes.yml");
+$routes = \yaml_parse_file("../routes.yml");
 
 
 if(!empty($routes[$requestUri])){
