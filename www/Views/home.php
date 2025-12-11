@@ -1,18 +1,18 @@
-
 <?php 
-    $mesPages = [];
+    $myPages = [];
+    // On récupère le JSON envoyé par le contrôleur
     if(isset($pages_json)) {
-        $mesPages = json_decode($pages_json, true); 
+        $myPages = json_decode($pages_json, true); 
     }
 ?>
 
 <nav>
     <h3>Menu</h3>
     <ul>
-        <?php foreach($mesPages as $page): ?>
+        <?php foreach($myPages as $page): ?>
             <li>
                 <a href="/<?= htmlspecialchars($page['slug']) ?>">
-                    <?= htmlspecialchars($page['titre']) ?>
+                    <?= htmlspecialchars($page['title']) ?>
                 </a>
             </li>
         <?php endforeach; ?>
@@ -20,7 +20,7 @@
 </nav>
 
 <?php
-
+// Vérification de la session
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     echo '<a href="/login">connexion</a>';
 } else {

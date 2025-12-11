@@ -163,6 +163,12 @@ class Page
         return $this->updatedAt;
     }
 
+    public function setUpdatedAt($date): self
+    {
+        $this->updatedAt = is_string($date) ? new DateTime($date) : $date;
+        return $this;
+    }
+
     // Standard naming convention for booleans is "is..." or "has..."
     public function isPublished(): bool
     {
