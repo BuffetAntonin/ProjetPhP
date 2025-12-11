@@ -41,6 +41,14 @@ class Page
         } elseif (mb_strlen($cleanedTitle) > 255) {
             $this->errors['title'] = "Le titre est trop long (max 255 car.).";
         }
+        else { // je l'ai supprime dans mon code orginale quand j'ai urlEncode
+            $routes = yaml_parse_file("../routes.yml"); 
+            $routesStatiques = array_keys($routes);
+
+            if (in_array('/' . $slugNettoye, $routesStatiques)) {
+                $this->erreurs['slug'] = "Ce slug est réservé";
+            }
+        }
         $this->title = $cleanedTitle;
 
         
