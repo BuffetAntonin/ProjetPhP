@@ -1,6 +1,6 @@
-<h1><?= $titre ?></h1>
+<h1><?= $title ?></h1>
 <div>
-    <?= $contenu ?>
+    <?= $content ?>
 </div>
 <hr>
 <a href="/">Retour à l'accueil</a>

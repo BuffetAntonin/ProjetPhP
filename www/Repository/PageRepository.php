@@ -58,19 +58,31 @@ class PageRepository
 
     public function findById(int $pageId, int $userId): ?Page
     {
-        // SQL untouched
-        $sql = "SELECT * FROM public.page WHERE id_page = :id and id_utilisateur = :idUser";
+        $roleSql = "SELECT id_role FROM public.users WHERE id = :id";
+        $roleStmt = $this->db->prepare($roleSql);
+        $roleStmt->execute([':id' => $userId]);
         
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':idUser', $userId, PDO::PARAM_INT);
-        $stmt->bindValue(':id', $pageId, PDO::PARAM_INT);
+        $roleId = (int) $roleStmt->fetchColumn();
+
+        if ($roleId === 1) {
+ 
+            $sql = "SELECT * FROM public.page WHERE id_page = :pageId";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':pageId', $pageId, \PDO::PARAM_INT);
+        } else {
+
+            $sql = "SELECT * FROM public.page WHERE id_page = :pageId AND id_utilisateur = :userId";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':pageId', $pageId, \PDO::PARAM_INT);
+            $stmt->bindValue(':userId', $userId, \PDO::PARAM_INT);
+        }
+        
         $stmt->execute();
         
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$row) return null;
 
-        // Hydration: DB columns (French) -> Object Constructor (English logic)
         $page = new Page(
             $row['titre'],
             $row['slug'],
@@ -79,8 +91,14 @@ class PageRepository
             $row['est_publie']
         );
         
-        // Set the ID manually as it's not in the constructor
         $page->setId($row['id_page']);
+        
+        if (isset($row['date_creation'])) {
+            $page->setCreatedAt($row['date_creation']);
+        }
+        if (isset($row['date_modification'])) {
+            $page->setUpdatedAt($row['date_modification']);
+        }
         
         return $page;
     }

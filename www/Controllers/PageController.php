@@ -132,9 +132,6 @@ class PageController
         $render->render();
     }
 
-    /**
-     * Delete (With Session and checks)
-     */
     public function delete(): void
     {
         if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
@@ -155,7 +152,7 @@ class PageController
         $page = $this->repo->findById($pageId, $currentUserId);
 
         if (!$page) {
-            $_SESSION['flash_error'] = "Page introuvable.";
+            $_SESSION['flash_error'] = "Page introuvable.". $pageId." ".$currentUserId;
             header('Location: /index-page');
             exit;
         }
@@ -198,7 +195,7 @@ class PageController
         $page = $this->repo->findById($pageId, $currentUserId);
 
         if (!$page) {
-            $_SESSION['flash_error'] = "Page introuvable.";
+            $_SESSION['flash_error'] = "Page introuvable.". $pageId." ".$currentUserId;
             header('Location: /index-page');
             exit;
         }
